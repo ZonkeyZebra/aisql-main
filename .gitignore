@@ -1,0 +1,6 @@
+/config.json
+/examples
+/cache
+/.mypy_cache
+/config.gemini.json
+/other_key_use.txt
