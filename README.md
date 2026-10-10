@@ -11,7 +11,7 @@ The small database was generated using the PokeAPI and I am using OpenAI for the
 **Sample question:** Which pokemon have the ability of 'intimidate'?
 
 SQL Syntax Response:
-```
+```sql
 SELECT p.name
 FROM pokemon p
 JOIN pokemon_ability pa ON p.pokemon_id = pa.pokemon_id
@@ -20,14 +20,10 @@ WHERE a.name = 'intimidate';
 ```
 
 Query Raw Response:
-```
-[('arbok',), ('arcanine',), ('ekans',), ('granbull',), ('growlithe',), ('gyarados',), ('hitmontop',), ('qwilfish',), ('snubbull',), ('stantler',), ('tauros',)]
-```
+> [('arbok',), ('arcanine',), ('ekans',), ('granbull',), ('growlithe',), ('gyarados',), ('hitmontop',), ('qwilfish',), ('snubbull',), ('stantler',), ('tauros',)]
 
 Friendly Response:
-```
-The Pokémon with the ability "intimidate" are: Arbok, Arcanine, Ekans, Granbull, Growlithe, Gyarados, Hitmontop, Qwilfish, Snubbull, Stantler, and Tauros.
-```
+> The Pokémon with the ability "intimidate" are: Arbok, Arcanine, Ekans, Granbull, Growlithe, Gyarados, Hitmontop, Qwilfish, Snubbull, Stantler, and Tauros.
 
 I thought it handled this request pretty well. It correctly managed to find all the pokemon in the database that had this particular ability.
 
@@ -35,21 +31,17 @@ I thought it handled this request pretty well. It correctly managed to find all 
 **Sample question:** Which pokemon have a lot of hp and would be good for a tank in battle?
 
 SQL Syntax Response:
-```
+```sql
 SELECT p.name
 FROM pokemon p
 WHERE p.hp >= 150;
 ```
 
 Query Raw Response:
-```
-[('chansey',), ('snorlax',), ('wobbuffet',), ('blissey',)]
-```
+> [('chansey',), ('snorlax',), ('wobbuffet',), ('blissey',)]
 
 Friendly Response:
-```
-The Pokémon that have a lot of HP and would be good for a tank in battle are Chansey, Snorlax, Wobbuffet, and Blissey.
-```
+> The Pokémon that have a lot of HP and would be good for a tank in battle are Chansey, Snorlax, Wobbuffet, and Blissey.
 
 I was quite curious to see how it would handle a more vague and subjective request. I think it did an all right job, but I do find it interesting to see what value it decided would mean "a lot", which in this case was apparently 150. I can't say I would argue with the number it selected, but it was interesting to see.
 
