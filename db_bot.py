@@ -2,14 +2,18 @@ import json
 import os
 import sqlite3
 import time
+from typing import Any
 
 from openai import OpenAI, RateLimitError
 
 print("Running db_bot.py!")
 
 fdir = os.path.dirname(os.path.abspath(__file__))
+
+
 def getPath(fname):
     return os.path.join(fdir, fname)
+
 
 # ----------------------------------------------------------------------------
 # SQLITE
@@ -29,7 +33,7 @@ with open(setupSqlPath) as setupSqlFile, open(setupSqlDataPath) as setupSqlDataF
     setupSqlScript = setupSqlFile.read()
     setupSqlDataScript = setupSqlDataFile.read()
 
-sqliteCursor.executescript(setupSqlScript)      # tables and keys
+sqliteCursor.executescript(setupSqlScript)  # tables and keys
 sqliteCursor.executescript(setupSqlDataScript)  # data
 sqliteCon.commit()
 
@@ -61,7 +65,9 @@ with open(configPath) as configFile:
 # }
 client = OpenAI(api_key=config["apiKey"], base_url=config["baseUrl"])
 chosen_model = config["model"]
-delaySeconds = config.get("delaySeconds", 5)  # spacing between calls to stay under free-tier limits
+delaySeconds = config.get(
+    "delaySeconds", 5
+)  # spacing between calls to stay under free-tier limits
 
 
 def getLlmResponse(content, retries=4):
@@ -84,8 +90,10 @@ def getLlmResponse(content, retries=4):
 # ----------------------------------------------------------------------------
 # STRATEGIES
 # ----------------------------------------------------------------------------
-commonSqlOnlyRequest = (" Give me a sqlite select statement that answers the question. "
-                        "Only respond with sqlite syntax. If there is an error do not explain it!")
+commonSqlOnlyRequest = (
+    " Give me a sqlite select statement that answers the question. "
+    "Only respond with sqlite syntax. If there is an error do not explain it!"
+)
 
 # Example from the SAME domain (Pokemon)
 singleDomainExample = (
@@ -107,8 +115,13 @@ otherDomainExample = (
 
 strategies = {
     "zero_shot": setupSqlScript + commonSqlOnlyRequest,
-    "single_domain_double_shot": setupSqlScript + singleDomainExample + commonSqlOnlyRequest,
-    "multi_domain_double_shot": otherDomainExample + setupSqlScript + singleDomainExample + commonSqlOnlyRequest,
+    "single_domain_double_shot": setupSqlScript
+    + singleDomainExample
+    + commonSqlOnlyRequest,
+    "multi_domain_double_shot": otherDomainExample
+    + setupSqlScript
+    + singleDomainExample
+    + commonSqlOnlyRequest,
 }
 
 questions = [
@@ -119,6 +132,9 @@ questions = [
     "How many pokemon are there of each type as their primary type?",
     "Which pokemon are weak to water attacks?",
     "Which of the previous pokemon are also legendary?",  # follow-up: needs earlier context
+    "Which pokemon have a lot of hp and would be good for a tank in battle?",
+    "Which pokemon have the ability of 'intimidate'?",
+    "Who is the strongest pokemon?",
 ]
 
 USE_HISTORY = True  # include earlier question/SQL pairs so follow-ups like "the previous pokemon" can work
@@ -131,7 +147,7 @@ def sanitizeForJustSql(value):
         value = value.split(marker, 1)[1]
         newline_index = value.find("\n")  # skip the language tag (sql, sqlite, ...)
         if newline_index != -1:
-            value = value[newline_index + 1:]
+            value = value[newline_index + 1 :]
     if marker in value:
         value = value.split(marker, 1)[0]
     return value.strip()
@@ -141,15 +157,20 @@ def buildSqlPrompt(strategy, question, history):
     prompt = strategies[strategy]
     if USE_HISTORY and history:
         prompt += " Earlier in this conversation: " + " ".join(
-            f'Q: "{h["question"]}" SQL: {h["sql"]}' for h in history[-2:])
+            f'Q: "{h["question"]}" SQL: {h["sql"]}' for h in history[-2:]
+        )
     return prompt + " " + question
+
+
+history: list[dict[str, str]] = []
 
 
 def buildFriendlyPrompt(question, sql, rawResult):
     # Gives the model the schema, the SQL that ran, and the result, not just the question and rows.
     return (
-        "You are answering questions about a Pokemon database with this schema:\n" + setupSqlScript +
-        f'\nThe user asked: "{question}"\n'
+        "You are answering questions about a Pokemon database with this schema:\n"
+        + setupSqlScript
+        + f'\nThe user asked: "{question}"\n'
         f"This SQL query was run to answer it:\n{sql}\n"
         f"The query returned these rows (as Python tuples): {rawResult}\n"
         "Using only these rows, give a concise, friendly answer in plain English. "
@@ -161,14 +182,19 @@ def buildFriendlyPrompt(question, sql, rawResult):
 # RUN
 # ----------------------------------------------------------------------------
 for strategy in strategies:
-    responses = {"strategy": strategy, "prompt_prefix": strategies[strategy]}
+    responses: dict[str, Any] = {
+        "strategy": strategy,
+        "prompt_prefix": strategies[strategy],
+    }
     questionResults = []
     history = []
     print("########################################################################")
     print(f"Running strategy: {strategy}")
 
     for question in questions:
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        print(
+            "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        )
         print("Question:")
         print(question)
 
@@ -180,7 +206,8 @@ for strategy in strategies:
 
         try:
             sqlSyntaxResponse = sanitizeForJustSql(
-                getLlmResponse(buildSqlPrompt(strategy, question, history)))
+                getLlmResponse(buildSqlPrompt(strategy, question, history))
+            )
             print("SQL Syntax Response:")
             print(sqlSyntaxResponse)
 
@@ -189,7 +216,8 @@ for strategy in strategies:
             print(queryRawResponse)
 
             friendlyResponse = getLlmResponse(
-                buildFriendlyPrompt(question, sqlSyntaxResponse, queryRawResponse))
+                buildFriendlyPrompt(question, sqlSyntaxResponse, queryRawResponse)
+            )
             print("Friendly Response:")
             print(friendlyResponse)
 
@@ -198,13 +226,15 @@ for strategy in strategies:
             error = str(err)
             print("Error:", err)
 
-        questionResults.append({
-            "question": question,
-            "sql": sqlSyntaxResponse,
-            "queryRawResponse": queryRawResponse,
-            "friendlyResponse": friendlyResponse,
-            "error": error,
-        })
+        questionResults.append(
+            {
+                "question": question,
+                "sql": sqlSyntaxResponse,
+                "queryRawResponse": queryRawResponse,
+                "friendlyResponse": friendlyResponse,
+                "error": error,
+            }
+        )
 
     responses["questionResults"] = questionResults
     with open(getPath(f"response_{strategy}_{time.time()}.json"), "w") as outFile:

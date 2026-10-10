@@ -1,0 +1,76 @@
+{
+  "strategy": "single_domain_double_shot",
+  "prompt_prefix": "-- Pokemon database (SQLite). This file is also pasted into the AI prompt,\n-- so the comments are there to help the model write correct SQL.\n\nCREATE TABLE type (\n    type_id INTEGER PRIMARY KEY,\n    name TEXT NOT NULL UNIQUE              -- e.g. 'fire', 'water', 'grass'\n);\n\nCREATE TABLE pokemon (\n    pokemon_id INTEGER PRIMARY KEY,        -- Pokedex number\n    name TEXT NOT NULL UNIQUE,             -- lowercase, e.g. 'pikachu'\n    generation INTEGER NOT NULL,           -- 1, 2, 3, ...\n    height_m REAL,                         -- meters\n    weight_kg REAL,                        -- kilograms\n    base_experience INTEGER,\n    is_legendary INTEGER NOT NULL DEFAULT 0, -- 1 = legendary or mythical, 0 = not\n    hp INTEGER NOT NULL,                   -- base stats\n    attack INTEGER NOT NULL,\n    defense INTEGER NOT NULL,\n    special_attack INTEGER NOT NULL,\n    special_defense INTEGER NOT NULL,\n    speed INTEGER NOT NULL\n);\n\n-- A pokemon has one or two types (many-to-many)\nCREATE TABLE pokemon_type (\n    pokemon_id INTEGER NOT NULL,\n    type_id INTEGER NOT NULL,\n    slot INTEGER NOT NULL,                 -- 1 = primary type, 2 = secondary type\n    PRIMARY KEY (pokemon_id, type_id),\n    FOREIGN KEY (pokemon_id) REFERENCES pokemon (pokemon_id),\n    FOREIGN KEY (type_id) REFERENCES type (type_id)\n);\n\nCREATE TABLE ability (\n    ability_id INTEGER PRIMARY KEY,\n    name TEXT NOT NULL UNIQUE              -- e.g. 'static', 'overgrow'\n);\n\nCREATE TABLE pokemon_ability (\n    pokemon_id INTEGER NOT NULL,\n    ability_id INTEGER NOT NULL,\n    is_hidden INTEGER NOT NULL DEFAULT 0,  -- 1 = hidden ability\n    PRIMARY KEY (pokemon_id, ability_id),\n    FOREIGN KEY (pokemon_id) REFERENCES pokemon (pokemon_id),\n    FOREIGN KEY (ability_id) REFERENCES ability (ability_id)\n);\n\n-- Damage multiplier when an attack of one type hits a defender of another type.\n-- 0 = no effect, 0.5 = not very effective, 1 = normal, 2 = super effective.\n-- For a dual-type defender, multiply the two rows together.\nCREATE TABLE type_effectiveness (\n    attacking_type_id INTEGER NOT NULL,\n    defending_type_id INTEGER NOT NULL,\n    multiplier REAL NOT NULL,\n    PRIMARY KEY (attacking_type_id, defending_type_id),\n    FOREIGN KEY (attacking_type_id) REFERENCES type (type_id),\n    FOREIGN KEY (defending_type_id) REFERENCES type (type_id)\n);\n Which pokemon have two types? \nSELECT p.name\nFROM pokemon p\nJOIN pokemon_type pt ON p.pokemon_id = pt.pokemon_id\nGROUP BY p.pokemon_id\nHAVING COUNT(*) = 2;\n  Give me a sqlite select statement that answers the question. Only respond with sqlite syntax. If there is an error do not explain it!",
+  "questionResults": [
+    {
+      "question": "Which pokemon has the highest attack?",
+      "sql": "SELECT name\nFROM pokemon\nORDER BY attack DESC\nLIMIT 1;",
+      "queryRawResponse": "[('dragonite',)]",
+      "friendlyResponse": "The Pok\u00e9mon with the highest attack is Dragonite.",
+      "error": "None"
+    },
+    {
+      "question": "What are the top 3 fastest pokemon?",
+      "sql": "SELECT name\nFROM pokemon\nORDER BY speed DESC\nLIMIT 3;",
+      "queryRawResponse": "[('electrode',), ('jolteon',), ('aerodactyl',)]",
+      "friendlyResponse": "The top 3 fastest Pok\u00e9mon are Electrode, Jolteon, and Aerodactyl.",
+      "error": "None"
+    },
+    {
+      "question": "Which pokemon have more than one type?",
+      "sql": "SELECT p.name\nFROM pokemon p\nJOIN pokemon_type pt ON p.pokemon_id = pt.pokemon_id\nGROUP BY p.pokemon_id\nHAVING COUNT(pt.type_id) > 1;",
+      "queryRawResponse": "[('bulbasaur',), ('ivysaur',), ('venusaur',), ('charizard',), ('butterfree',), ('weedle',), ('kakuna',), ('beedrill',), ('pidgey',), ('pidgeotto',), ('pidgeot',), ('spearow',), ('fearow',), ('nidoqueen',), ('nidoking',), ('jigglypuff',), ('wigglytuff',), ('zubat',), ('golbat',), ('oddish',), ('gloom',), ('vileplume',), ('paras',), ('parasect',), ('venonat',), ('venomoth',), ('poliwrath',), ('bellsprout',), ('weepinbell',), ('victreebel',), ('tentacool',), ('tentacruel',), ('geodude',), ('graveler',), ('golem',), ('slowpoke',), ('slowbro',), ('magnemite',), ('magneton',), ('farfetchd',), ('doduo',), ('dodrio',), ('dewgong',), ('cloyster',), ('gastly',), ('haunter',), ('gengar',), ('onix',), ('exeggcute',), ('exeggutor',), ('rhyhorn',), ('rhydon',), ('starmie',), ('mr-mime',), ('scyther',), ('jynx',), ('gyarados',), ('lapras',), ('omanyte',), ('omastar',), ('kabuto',), ('kabutops',), ('aerodactyl',), ('articuno',), ('zapdos',), ('moltres',), ('dragonite',), ('hoothoot',), ('noctowl',), ('ledyba',), ('ledian',), ('spinarak',), ('ariados',), ('crobat',), ('chinchou',), ('lanturn',), ('igglybuff',), ('togetic',), ('natu',), ('xatu',), ('marill',), ('azumarill',), ('hoppip',), ('skiploom',), ('jumpluff',), ('yanma',), ('wooper',), ('quagsire',), ('murkrow',), ('slowking',), ('girafarig',), ('forretress',), ('gligar',), ('steelix',), ('qwilfish',), ('scizor',), ('shuckle',), ('heracross',), ('sneasel',), ('magcargo',), ('swinub',), ('piloswine',), ('corsola',), ('delibird',), ('mantine',), ('skarmory',), ('houndour',), ('houndoom',), ('kingdra',), ('smoochum',), ('larvitar',), ('pupitar',), ('tyranitar',), ('lugia',), ('ho-oh',), ('celebi',)]",
+      "friendlyResponse": "The Pok\u00e9mon that have more than one type are: bulbasaur, ivysaur, venusaur, charizard, butterfree, weedle, kakuna, beedrill, pidgey, pidgeotto, pidgeot, spearow, fearow, nidoqueen, nidoking, jigglypuff, wiglytuff, zubat, golbat, oddish, gloom, vileplume, paras, parasect, venonat, venomoth, poliwrath, bellsprout, weepinbell, victreebel, tentacool, tentacruel, geodude, graveler, golem, slowpoke, slowbro, magnemite, magneton, farfetchd, doduo, dodrio, dewgong, cloyster, gastly, haunter, gengar, onix, exeggcute, exeggutor, rhyhorn, rhydon, starmie, mr-mime, scyther, jynx, gyarados, lapras, omanyte, omastar, kabuto, kabutops, aerodactyl, articuno, zapdos, moltres, dragonite, hoothoot, noctowl, ledyba, ledian, spinarak, ariados, crobat, chinchou, lanturn, igglybuff, toge tic, natu, xatu, marill, azumarill, hoppip, skiploom, jumpluff, yanma, wooper, quagsire, murkrow, slowking, girafarig, forretress, gligar, steelix, qwilfish, scizor, shuckle, heracross, sneasel, magcargo, swinub, piloswine, corsola, delibird, mantine, skarmory, houndour, houndoom, kingdra, smoochum, larvitar, pupitar, tyranitar, lugia, ho-oh, and celebi.",
+      "error": "None"
+    },
+    {
+      "question": "Which fire type pokemon have the highest special attack?",
+      "sql": "SELECT p.name\nFROM pokemon p\nJOIN pokemon_type pt ON p.pokemon_id = pt.pokemon_id\nJOIN type t ON pt.type_id = t.type_id\nWHERE t.name = 'fire'\nORDER BY p.special_attack DESC\nLIMIT 1;",
+      "queryRawResponse": "[('moltres',)]",
+      "friendlyResponse": "The fire type Pok\u00e9mon with the highest special attack is Moltres.",
+      "error": "None"
+    },
+    {
+      "question": "How many pokemon are there of each type as their primary type?",
+      "sql": "SELECT t.name AS type_name, COUNT(pt.pokemon_id) AS pokemon_count\nFROM type t\nJOIN pokemon_type pt ON t.type_id = pt.type_id\nWHERE pt.slot = 1\nGROUP BY t.type_id;",
+      "queryRawResponse": "[('normal', 37), ('fighting', 9), ('poison', 15), ('ground', 11), ('rock', 13), ('bug', 22), ('ghost', 4), ('steel', 2), ('fire', 20), ('water', 46), ('grass', 21), ('electric', 15), ('psychic', 15), ('ice', 6), ('dragon', 3), ('dark', 5), ('fairy', 7)]",
+      "friendlyResponse": "There are the following numbers of Pok\u00e9mon for each primary type:\n\n- Normal: 37\n- Fighting: 9\n- Poison: 15\n- Ground: 11\n- Rock: 13\n- Bug: 22\n- Ghost: 4\n- Steel: 2\n- Fire: 20\n- Water: 46\n- Grass: 21\n- Electric: 15\n- Psychic: 15\n- Ice: 6\n- Dragon: 3\n- Dark: 5\n- Fairy: 7",
+      "error": "None"
+    },
+    {
+      "question": "Which pokemon are weak to water attacks?",
+      "sql": "SELECT p.name\nFROM pokemon p\nJOIN pokemon_type pt ON p.pokemon_id = pt.pokemon_id\nJOIN type t ON pt.type_id = t.type_id\nJOIN type_effectiveness te ON t.type_id = te.defending_type_id\nWHERE te.attacking_type_id = (SELECT type_id FROM type WHERE name = 'water') \nAND te.multiplier < 1;",
+      "queryRawResponse": "[('bulbasaur',), ('ivysaur',), ('venusaur',), ('squirtle',), ('wartortle',), ('blastoise',), ('oddish',), ('gloom',), ('vileplume',), ('paras',), ('parasect',), ('psyduck',), ('golduck',), ('poliwag',), ('poliwhirl',), ('poliwrath',), ('bellsprout',), ('weepinbell',), ('victreebel',), ('tentacool',), ('tentacruel',), ('slowpoke',), ('slowbro',), ('seel',), ('dewgong',), ('shellder',), ('cloyster',), ('krabby',), ('kingler',), ('exeggcute',), ('exeggutor',), ('tangela',), ('horsea',), ('seadra',), ('goldeen',), ('seaking',), ('staryu',), ('starmie',), ('magikarp',), ('gyarados',), ('lapras',), ('vaporeon',), ('omanyte',), ('omastar',), ('kabuto',), ('kabutops',), ('dratini',), ('dragonair',), ('dragonite',), ('chikorita',), ('bayleef',), ('meganium',), ('totodile',), ('croconaw',), ('feraligatr',), ('chinchou',), ('lanturn',), ('bellossom',), ('marill',), ('azumarill',), ('politoed',), ('hoppip',), ('skiploom',), ('jumpluff',), ('sunkern',), ('sunflora',), ('wooper',), ('quagsire',), ('slowking',), ('qwilfish',), ('corsola',), ('remoraid',), ('octillery',), ('mantine',), ('kingdra',), ('kingdra',), ('suicune',), ('celebi',)]",
+      "friendlyResponse": "The Pok\u00e9mon that are weak to water attacks include: Bulbasaur, Ivysaur, Venusaur, Squirtle, Wartortle, Blastoise, Oddish, Gloom, Vileplume, Paras, Parasect, Psyduck, Golduck, Poliwag, Poliwhirl, Poliwrath, Bellsprout, Weepinbell, Victreebel, Tentacool, Tentacruel, Slowpoke, Slowbro, Seel, Dewgong, Shellder, Cloyster, Krabby, Kingler, Exeggcute, Exeggutor, Tangela, Horsea, Seadra, Goldeen, Seaking, Staryu, Starmie, Magikarp, Gyarados, Lapras, Vaporeon, Omanyte, Omastar, Kabuto, Kabutops, Dratini, Dragonair, Dragonite, Chikorita, Bayleef, Meganium, Totodile, Croconaw, Feraligatr, Chinchou, Lanturn, Bellossom, Marill, Azumarill, Politoed, Hoppip, Skiploom, Jumpluff, Sunkern, Sunflora, Wooper, Quagsire, Slowking, Qwilfish, Corsola, Remoraid, Octillery, Mantine, Kingdra, and Suicune.",
+      "error": "None"
+    },
+    {
+      "question": "Which of the previous pokemon are also legendary?",
+      "sql": "SELECT p.name\nFROM pokemon p\nJOIN pokemon_type pt ON p.pokemon_id = pt.pokemon_id\nJOIN type t ON pt.type_id = t.type_id\nJOIN type_effectiveness te ON t.type_id = te.defending_type_id\nWHERE te.attacking_type_id = (SELECT type_id FROM type WHERE name = 'water') \nAND te.multiplier < 1\nAND p.is_legendary = 1;",
+      "queryRawResponse": "[('suicune',), ('celebi',)]",
+      "friendlyResponse": "The legendary Pok\u00e9mon that are also weak against water-type attacks are Suicune and Celebi.",
+      "error": "None"
+    },
+    {
+      "question": "Which pokemon have a lot of hp and would be good for a tank in battle?",
+      "sql": "SELECT p.name\nFROM pokemon p\nWHERE p.hp >= 100;",
+      "queryRawResponse": "[('jigglypuff',), ('wigglytuff',), ('muk',), ('rhydon',), ('chansey',), ('kangaskhan',), ('lapras',), ('vaporeon',), ('snorlax',), ('mewtwo',), ('mew',), ('noctowl',), ('lanturn',), ('azumarill',), ('wobbuffet',), ('dunsparce',), ('piloswine',), ('blissey',), ('entei',), ('suicune',), ('tyranitar',), ('lugia',), ('ho-oh',), ('celebi',)]",
+      "friendlyResponse": "The Pok\u00e9mon with a lot of HP, making them suitable as tanks in battle, are: Jigglypuff, Wigglytuff, Muk, Rhydon, Chansey, Kangaskhan, Lapras, Vaporeon, Snorlax, Mewtwo, Mew, Noctowl, Lanturn, Azumarill, Wobbuffet, Dunsparce, Piloswine, Blissey, Entei, Suicune, Tyranitar, Lugia, Ho-Oh, and Celebi.",
+      "error": "None"
+    },
+    {
+      "question": "Which pokemon have the ability of 'intimidate'?",
+      "sql": "SELECT p.name\nFROM pokemon p\nJOIN pokemon_ability pa ON p.pokemon_id = pa.pokemon_id\nJOIN ability a ON pa.ability_id = a.ability_id\nWHERE a.name = 'intimidate';",
+      "queryRawResponse": "[('arbok',), ('arcanine',), ('ekans',), ('granbull',), ('growlithe',), ('gyarados',), ('hitmontop',), ('qwilfish',), ('snubbull',), ('stantler',), ('tauros',)]",
+      "friendlyResponse": "The Pok\u00e9mon with the ability 'intimidate' are: Arbok, Arcanine, Ekans, Granbull, Growlithe, Gyarados, Hitmontop, Qwilfish, Snubbull, Stantler, and Tauros.",
+      "error": "None"
+    },
+    {
+      "question": "Who is the strongest pokemon?",
+      "sql": "SELECT p.name\nFROM pokemon p\nORDER BY p.hp + p.attack + p.defense + p.special_attack + p.special_defense + p.speed DESC\nLIMIT 1;",
+      "queryRawResponse": "[('mewtwo',)]",
+      "friendlyResponse": "The strongest Pok\u00e9mon is Mewtwo.",
+      "error": "None"
+    }
+  ]
+}
